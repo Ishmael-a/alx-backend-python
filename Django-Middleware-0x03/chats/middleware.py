@@ -23,11 +23,13 @@ class RequestLoggingMiddleware:
         self.get_response = get_response
     
     def __call__(self, request):
+        print("Middleware is running!")
         # Get user information
         user = request.user if request.user.is_authenticated else "Anonymous"
         
         # Log the request
         log_message = f"{datetime.now()} - User: {user} - Path: {request.path}"
+        print(f"Log Message!:: {log_message}")
         logger.info(log_message)
         
         # Process the request
