@@ -11,13 +11,55 @@ class UserSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserSerializer(read_only=True)
-    sender_id = serializers.CharField(write_only=True, required=False)
+    sender_id = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.all(),
+        source='sender',
+        write_only=True,
+        required=False
+    )
     sender_name = serializers.SerializerMethodField()
+    conversation_id = serializers.UUIDField(write_only=True)
 
     class Meta:
         model = Message
-        fields = ["message_id", "sender", "sender_id", "sender_name", "message_body", "sent_at"]
-        read_only_fields = ["message_id", "sender", "sent_at"]
+        fields = [
+            'message_id',
+            'conversation',
+            'conversation_id',
+            'sender',
+            'sender_id',
+            'message_body',
+            'is_read',
+            'sent_at',
+            'updated_at'
+        ]
+        read_only_fields = ["message_id", "sender", "sent_at", "updated_at"]
+
+    def create(self, validated_data):
+        """
+        Create a message and associate it with a conversation.
+        """
+        conversation_id = validated_data.pop('conversation_id')
+        
+        try:
+            conversation = Conversation.objects.get(conversation_id=conversation_id)
+        except Conversation.DoesNotExist:
+            raise serializers.ValidationError({
+                'conversation_id': 'Conversation does not exist'
+            })
+        
+        # Verify sender is a participant
+        sender = validated_data.get('sender')
+        if sender and not conversation.participants.filter(id=sender.id).exists():
+            raise serializers.ValidationError({
+                'conversation': 'You are not a participant of this conversation'
+            })
+        
+        message = Message.objects.create(
+            conversation=conversation,
+            **validated_data
+        )
+        return message
 
     def get_sender_name(self, obj):
         return f"{obj.sender.first_name} {obj.sender.last_name}"
@@ -32,10 +74,11 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many=True, read_only=True)
-    participant_ids = serializers.ListField(
-        child=serializers.CharField(),
+    participant_ids = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=User.objects.all(),
         write_only=True,
-        required=False
+        source='participants'
     )
     messages = MessageSerializer(many=True, read_only=True)
     message_count = serializers.SerializerMethodField()
@@ -50,9 +93,10 @@ class ConversationSerializer(serializers.ModelSerializer):
             "messages",
             "message_count",
             "last_message",
-            "created_at"
+            "created_at",
+            "updated_at"
         ]
-        read_only_fields = ["conversation_id", "created_at"]
+        read_only_fields = ["conversation_id", "created_at","updated_at"]
 
     def get_message_count(self, obj):
         return obj.messages.count()
