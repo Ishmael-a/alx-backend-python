@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from typing import cast
+from django.db.models.manager import BaseManager
 
 class UserManager(BaseUserManager):
     def get_by_natural_key(self, username):
@@ -32,8 +34,12 @@ class User(AbstractBaseUser, PermissionsMixin):
     phone_number = models.CharField(max_length=20, null=True, blank=True)
     # password_hash = models.CharField(max_length=128, null=False, blank=False)
 
+    objects: UserManager = UserManager()
+
+
     ROLE_CHOICES = [
         ('guest', 'Guest'),
+        ('moderator', 'Moderator'),
         ('host', 'Host'),
         ('admin', 'Admin'),
     ]
