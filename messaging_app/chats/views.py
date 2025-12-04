@@ -63,7 +63,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
 
         if not conversation.participants.filter(id=request.user.id).exists():
-            raise PermissionDenied(detail="You are not allowed to access this conversation.")
+            return Response(
+                {'error': 'You are not allowed to access this conversation.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            # raise PermissionDenied(detail="You are not allowed to access this conversation.")
 
         messages = conversation.messages.all()
         
@@ -89,7 +93,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
         user_id = request.data.get('user_id')
 
         if not conversation.participants.filter(id=request.user.id).exists():
-            raise PermissionDenied(detail="You are not allowed to access this conversation.")
+            return Response(
+                {'error': 'You are not allowed to access this conversation.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            # raise PermissionDenied(detail="You are not allowed to access this conversation.")
         
         if not user_id:
             return Response(
@@ -121,7 +129,11 @@ class ConversationViewSet(viewsets.ModelViewSet):
         user_id = request.data.get('user_id')
 
         if not conversation.participants.filter(id=request.user.id).exists():
-            raise PermissionDenied(detail="You are not allowed to access this conversation.")
+            return Response(
+                {'error': 'You are not allowed to access this conversation.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            # raise PermissionDenied(detail="You are not allowed to access this conversation.")
         
         if not user_id:
             return Response(
