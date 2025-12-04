@@ -8,7 +8,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .models import Conversation, Message
+from .models import Conversation, Message, MessageHistory
 from .serializers import ConversationSerializer, MessageSerializer
 
 from .permissions import IsParticipantOfConversation, IsMessageSender
@@ -218,6 +218,27 @@ class MessageViewSet(viewsets.ModelViewSet):
         Set the sender to the current user when creating a message.
         """
         serializer.save(sender=self.request.user)
+
+        
+    def perform_update(self, serializer):
+        """
+        Update message and save edit history.
+        """
+        message = self.get_object()
+        new_content = serializer.validated_data.get('message_body', message.message_body)
+        
+        # Save old content to history before updating
+        if message.message_body != new_content:
+            MessageHistory.objects.create(
+                message=message,
+                old_content=message.message_body,
+                new_content=new_content,
+                edited_by=self.request.user
+            )
+        
+        # Mark as edited
+        serializer.save(edited=True)
+
 
     # Task 4: Endpoint to get unread messages using custom manager
     @action(detail=False, methods=['get'])
