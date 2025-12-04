@@ -1,6 +1,9 @@
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
+from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
@@ -27,6 +30,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
     serializer_class = ConversationSerializer
     permission_classes = [IsAuthenticated, IsParticipantOfConversation]
+    lookup_field = "conversation_id"
+    lookup_url_kwarg = "conversation_id"
 
     pagination_class = ConversationPagination
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
@@ -49,7 +54,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = serializer.save()
         conversation.participants.add(self.request.user)
 
-    
     @action(detail=True, methods=['get'])
     def messages(self, request, pk=None):
         """
@@ -57,6 +61,10 @@ class ConversationViewSet(viewsets.ModelViewSet):
         GET /api/conversations/{id}/messages/
         """
         conversation = self.get_object()
+
+        if not conversation.participants.filter(id=request.user.id).exists():
+            raise PermissionDenied(detail="You are not allowed to access this conversation.")
+
         messages = conversation.messages.all()
         
         # Apply pagination
@@ -70,7 +78,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
     
-
     @action(detail=True, methods=['post'])
     def add_participant(self, request, pk=None):
         """
@@ -80,6 +87,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """
         conversation = self.get_object()
         user_id = request.data.get('user_id')
+
+        if not conversation.participants.filter(id=request.user.id).exists():
+            raise PermissionDenied(detail="You are not allowed to access this conversation.")
         
         if not user_id:
             return Response(
@@ -109,6 +119,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """
         conversation = self.get_object()
         user_id = request.data.get('user_id')
+
+        if not conversation.participants.filter(id=request.user.id).exists():
+            raise PermissionDenied(detail="You are not allowed to access this conversation.")
         
         if not user_id:
             return Response(
@@ -128,7 +141,6 @@ class ConversationViewSet(viewsets.ModelViewSet):
                 {'error': 'User not found'},
                 status=status.HTTP_404_NOT_FOUND
             )
-
 
     def create(self, request, *args, **kwargs):
         participant_ids = request.data.get("participant_ids", [])
