@@ -10,6 +10,7 @@ django-rest-framework-nested==0.0.1
 djangorestframework==3.16.1
 djangorestframework_simplejwt==5.5.1
 idna==3.11
+mysqlclient>=2.2.0
 mysql-connector-python==9.5.0
 parameterized==0.9.0
 PyJWT==2.10.1
